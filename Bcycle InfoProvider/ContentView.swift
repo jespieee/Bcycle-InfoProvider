@@ -141,28 +141,52 @@ class ViewModel: ObservableObject {
 struct ContentView: View {
     
     @StateObject var viewModel = ViewModel()
+    @State private var selectedStationID: String?
+    private var selectedStationName: String {
+            if let station = viewModel.stationInfo.first(where: { $0.stationID == selectedStationID }) {
+                return station.name ?? station.stationID
+            }
+            return "None Selected"
+        }
+    
     var body: some View {
         NavigationView {
-            List {
-                ForEach(viewModel.stationInfo, id: \.self) { stationInfo in
-                    HStack {
-                        Text(stationInfo.stationID).bold()
+            VStack {
+                List {
+                    Picker(selection: $selectedStationID) {
+                        ForEach(viewModel.stationInfo, id: \.stationID) { station in
+                            Text(station.name ?? station.stationID)
+                                .tag(station.stationID)
+                        }
+                    } label: {
+                        HStack {
+                            Text("Station")
+                            Spacer()
+                            Text(selectedStationName)
+                                .foregroundColor(.gray)
+                        }
                     }
-                    .padding(3)
+                    .pickerStyle(MenuPickerStyle())
+                    .padding()
+                    
+                    // Optional: Show station details for selected station
+                    if let stationID = selectedStationID,
+                       let selectedStation = viewModel.stationInfo.first(where: { $0.stationID == stationID }) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Station Name: \(selectedStation.name ?? "Unknown")")
+                            Text("Address: \(selectedStation.address ?? "N/A")")
+                            Text("Region: \(selectedStation.regionID ?? "N/A")")
+                            Text("Type: \(selectedStation.type ?? "N/A")")
+                        }
+                        .padding()
+                    }
                 }
             }
-            .navigationTitle(Text("Bcycle InfoProvider"))
+            .navigationTitle("Bcycle InfoProvider")
             .onAppear {
-                self.viewModel.fetchStatus()
-                self.viewModel.fetchInfo()
+                viewModel.fetchStatus()
+                viewModel.fetchInfo()
             }
-        }
-        Button("Click me!") {
-            print("Hello!")
-            self.viewModel.fetchStatus()
-            print(self.viewModel.stationStatuses)
-            self.viewModel.fetchInfo()
-            print(self.viewModel.stationInfo)
         }
     }
 }
