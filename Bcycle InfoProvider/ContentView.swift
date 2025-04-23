@@ -7,6 +7,27 @@
 
 import SwiftUI
 
+struct StationStatusPayload: Codable {
+    let ttl: Int?
+    let data: StationStatusData
+    let version: String?
+}
+
+struct StationInfoPayload: Codable {
+    let ttl: Int?
+    let data: StationInfoData
+    let version: String?
+    let lastUpdated: Int?
+}
+
+struct StationStatusData: Codable {
+    let stations: [StationStatus]
+}
+
+struct StationInfoData: Codable {
+    let stations: [StationInfo]
+}
+
 struct StationStatus: Hashable, Codable {
     let stationID: String
     let numBikesAvailable: Int
@@ -15,9 +36,19 @@ struct StationStatus: Hashable, Codable {
     let isRenting: Bool
     let isReturning: Bool
     let lastUpdated: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case stationID = "station_id"
+        case numBikesAvailable = "num_bikes_available"
+        case numDocksAvailable = "num_docks_available"
+        case isInstalled = "is_installed"
+        case isRenting = "is_renting"
+        case isReturning = "is_returning"
+        case lastUpdated = "last_reported"
+    }
 }
 
-struct StationInfo: Hashable, Codable {
+struct StationInfo: Decodable, Encodable, Hashable {
     let stationID: String
     let latitude: Double
     let longitude: Double
@@ -26,23 +57,27 @@ struct StationInfo: Hashable, Codable {
     let regionID: String?
     let address: String?
     let name: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case stationID = "station_id"
+        case latitude = "lat"
+        case longitude = "lon"
+        case rentalURIs = "rental_uris"
+        case type = "_bcycle_station_type"
+        case regionID = "region_id"
+        case address = "address"
+        case name = "name"
+    }
 }
 
 struct StationRentalURIs: Hashable, Codable {
     let iOS: String
     let android: String
-}
-
-struct GBFSPayload: Codable {
-    let ttl: Int?
-    let data: StationStatusData
-    let version: String?
-    let lastUpdated: Int?
-
-}
-
-struct StationStatusData: Codable {
-    let stations: [StationInfo]
+    
+    enum CodingKeys: String, CodingKey {
+        case iOS = "ios"
+        case android = "android"
+    }
 }
 
 class ViewModel: ObservableObject {
@@ -62,9 +97,10 @@ class ViewModel: ObservableObject {
             }
             
             do {
-                let GBFSPayload = try JSONDecoder().decode(GBFSPayload.self, from: data)
+                let statusPayload = try JSONDecoder().decode(StationStatusPayload.self, from: data)
                 DispatchQueue.main.async {
-                    // self?.stationStatuses = GBFSPayload.data.stations
+                    self?.stationStatuses = statusPayload.data.stations
+                    print(statusPayload.data.stations)
                 }
             }
             catch {
@@ -87,9 +123,10 @@ class ViewModel: ObservableObject {
             }
             
             do {
-                let GBFSPayload = try JSONDecoder().decode(GBFSPayload.self, from: data)
+                let infoPayload = try JSONDecoder().decode(StationInfoPayload.self, from: data)
                 DispatchQueue.main.async {
-                    self?.stationInfo = GBFSPayload.data.stations
+                    self?.stationInfo = infoPayload.data.stations
+                    print(infoPayload.data.stations)
                 }
             }
             catch {
@@ -119,6 +156,13 @@ struct ContentView: View {
                 self.viewModel.fetchStatus()
                 self.viewModel.fetchInfo()
             }
+        }
+        Button("Click me!") {
+            print("Hello!")
+            self.viewModel.fetchStatus()
+            print(self.viewModel.stationStatuses)
+            self.viewModel.fetchInfo()
+            print(self.viewModel.stationInfo)
         }
     }
 }
